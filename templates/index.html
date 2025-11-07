@@ -1,0 +1,205 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>FFmpeg Command Builder & Runner</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width:1000px; margin: 2rem auto; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:1rem; }
+    .full { grid-column: 1 / -1; }
+    .field { margin-bottom: 0.7rem; }
+    label { display:block; font-weight:600; margin-bottom:0.25rem; }
+    input[type="text"], input[type="number"], select, textarea { width:100%; padding:0.5rem; }
+    .small { width:48%; display:inline-block; }
+    .btn { padding:0.6rem 1rem; font-weight:700; cursor:pointer; }
+    pre { background:#111; color:#eee; padding:1rem; overflow:auto; }
+    .note { font-size:0.9rem; color:#555; }
+  </style>
+</head>
+<body>
+  <h1>FFmpeg web — command picker & runner</h1>
+
+  <form id="mainForm" method="post" action="/process" enctype="multipart/form-data">
+    <div class="grid">
+      <div class="field">
+        <label for="command_key">Choose command / feature</label>
+        <select id="command_key" name="command_key" required onchange="onCommandChange()">
+          <option value="">-- select --</option>
+          {% for k in commands %}
+          <option value="{{k}}">{{k}}</option>
+          {% endfor %}
+        </select>
+        <p class="note">Selecting a command will update visible helper fields below.</p>
+      </div>
+
+      <div class="field">
+        <label>Output filename (optional)</label>
+        <input type="text" name="outname" placeholder="out_final.mp4">
+      </div>
+
+      <div class="field">
+        <label for="file1">Input file 1</label>
+        <input type="file" id="file1" name="file1" accept="video/*,audio/*">
+        <div class="note">Primary input</div>
+      </div>
+
+      <div class="field">
+        <label for="file2">Input file 2 (optional)</label>
+        <input type="file" id="file2" name="file2" accept="video/*,audio/*">
+        <div class="note">Second input (for merge, concat, replace audio etc.)</div>
+      </div>
+
+      <div class="field">
+        <label for="file3">Input file 3 (optional)</label>
+        <input type="file" id="file3" name="file3" accept="video/*,audio/*">
+      </div>
+
+      <div class="field">
+        <label for="image">Image (cover / overlay)</label>
+        <input type="file" id="image" name="image" accept="image/*">
+      </div>
+
+      <!-- Controls: common placeholders -->
+      <div class="field">
+        <label>Title</label>
+        <input type="text" name="title" placeholder="SURAT YA-SIN || سورة يس">
+      </div>
+
+      <div class="field">
+        <label>Text (for drawtext)</label>
+        <input type="text" name="text" placeholder="TOWSIF AKTAR">
+      </div>
+
+      <div class="field">
+        <label>Font (fontfile path)</label>
+        <input type="text" name="fontfile" placeholder="/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf">
+      </div>
+
+      <div class="field">
+        <label>Font size</label>
+        <input type="number" name="fontsize" value="20">
+      </div>
+
+      <div class="field">
+        <label>Font color</label>
+        <input type="text" name="fontcolor" value="gray">
+      </div>
+
+      <div class="field">
+        <label>Scale factor</label>
+        <input type="text" name="scale_factor" value="1.5">
+      </div>
+
+      <div class="field">
+        <label>Scale (width)</label>
+        <input type="text" name="scale_x" value="640">
+      </div>
+
+      <div class="field">
+        <label>Scale (height)</label>
+        <input type="text" name="scale_y" value="360">
+      </div>
+
+      <div class="field">
+        <label>Start time (HH:MM:SS)</label>
+        <input type="text" name="start" value="00:00:00">
+      </div>
+
+      <div class="field">
+        <label>Duration (HH:MM:SS)</label>
+        <input type="text" name="duration" value="00:03:15">
+      </div>
+
+      <div class="field">
+        <label>Overlay X</label>
+        <input type="text" name="overlay_x" value="10">
+      </div>
+
+      <div class="field">
+        <label>Overlay Y</label>
+        <input type="text" name="overlay_y" value="10">
+      </div>
+
+      <div class="field">
+        <label>Overlay XY (e.g. 01:00)</label>
+        <input type="text" name="overlay_xy" value="01:00">
+      </div>
+
+      <div class="field">
+        <label>Volume (multiplier)</label>
+        <input type="text" name="volume" value="1.5">
+      </div>
+
+      <div class="field">
+        <label>Volume dB (for pad/overlay example)</label>
+        <input type="text" name="volume_db" value="20">
+      </div>
+
+      <div class="field">
+        <label>Bitrate (audio)</label>
+        <input type="text" name="bitrate" value="128k">
+      </div>
+
+      <div class="field">
+        <label>Vid md5 (example)</label>
+        <input type="text" name="vid_md5" value="4032e3631edbed8efbfbabf97b5312d7">
+      </div>
+
+      <div class="field">
+        <label>Text motion period (seconds)</label>
+        <input type="text" name="period" value="5">
+      </div>
+
+      <div class="field">
+        <label>FPS (webp)</label>
+        <input type="text" name="fps" value="15">
+      </div>
+
+      <div class="field">
+        <label>PTS multiplier (reverse webp)</label>
+        <input type="text" name="pts_mul" value="2">
+      </div>
+
+      <div class="field full">
+        <label>Extra raw parameters (appends into template fields, optional)</label>
+        <input type="text" name="extra" placeholder="Any extra small value you want to pass">
+      </div>
+
+      <div class="field full">
+        <button type="button" class="btn" onclick="previewCmd()">Preview command</button>
+        <button type="submit" class="btn">Run FFmpeg (Upload + Process)</button>
+      </div>
+
+      <div class="field full">
+        <label>Command preview</label>
+        <pre id="cmdPreview">Select a command and fill fields, then click "Preview command".</pre>
+      </div>
+
+    </div>
+  </form>
+
+  <script>
+    async function previewCmd(){
+      const form = document.getElementById("mainForm");
+      const data = new FormData(form);
+      // fetch preview (server will not require file uploads for preview)
+      const resp = await fetch("/build-preview", {
+        method: "POST",
+        body: data
+      });
+      const res = await resp.json();
+      if(!res.ok){
+        document.getElementById("cmdPreview").innerText = "Error: " + (res.error || "unknown");
+      } else {
+        document.getElementById("cmdPreview").innerText = res.cmd;
+      }
+    }
+
+    function onCommandChange(){
+      // For future: show/hide relevant fields per-command.
+      // For now we'll just update preview area with selection name.
+      document.getElementById("cmdPreview").innerText = "Selected: " + document.getElementById("command_key").value + "\n\nFill fields and click Preview command.";
+    }
+  </script>
+</body>
+</html>
